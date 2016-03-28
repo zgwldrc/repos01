@@ -1,0 +1,24 @@
+#---------DNSFunction--------#
+func_addDnsARecords () 
+{ 
+    local name=$1; 
+    local ipaddr=$2; 
+    local fqdn=$(hostname) 
+    local zone=${fqdn#*.}
+    local zonefile=/var/named/${zone}.zone 
+ 
+    local ipaddr_hostbit=${ipaddr##*.} 
+    local zonefilerrt=${zonefile}.rrt 
+ 
+    sed -i "\$a $name\\tA\\t$ipaddr" $zonefile; 
+    echo "in $zonefile" 
+    tail -1 $zonefile 
+ 
+    sed -i "\$a $name\\tA\\t$ipaddr" $zonefile.ext; 
+    echo "in $zonefile.ext" 
+    tail -1 $zonefile.ext 
+ 
+    sed -i "\$a $ipaddr_hostbit\\tIN\\tPTR\\t$name.$zone" $zonefilerrt; 
+    echo "in $zonefilerrt" 
+    tail -1 $zonefilerrt 
+}

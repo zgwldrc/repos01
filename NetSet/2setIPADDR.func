@@ -1,0 +1,38 @@
+#!/bin/bash
+# Example: func_SetIPADDR $ipaddr $gateway $dns1 $netmask $interface 
+
+func_SetIPADDR() {
+# $1:        value of IPADDR/PREFIX
+# $2:        which interface to Set (default eth0)
+
+local usage="$0 IPADDR/PREFIX [interface=eth0]"
+
+	if [ $# -eq 0 ];then
+		echo $usage
+		exit 1
+	fi
+
+        ipcalc -4c $1 || exit 1
+        	
+        local LIST=(DEVICE BOOTPROTO HWADDR IPADDR ONBOOT PREFIX)
+
+local	FILE=/etc/sysconfig/network-scripts/ifcfg-${2:-eth0}
+local	DEVICE="${2:-eth0}"
+local	BOOTPROTO="none"
+local	HWADDR="$(ip link show ${2:-eth0} | grep ether | awk '{print $2}')"
+local	IPADDR=`echo $1 | cut -d/ -f1`
+local	PREFIX=`ipcalc -p $1 | cut -d= -f2`
+local	ONBOOT="yes"
+
+local i
+        for i in ${LIST[@]}
+	do
+	    func_SetStrValInFile $i $FILE
+	done
+
+	echo -e "\033[32m------------------------------------\033[0m"
+	echo -e "\033[32mYour ip args is like this...--------\033[0m"
+	cat $FILE
+	echo -e "\033[32m------------------------------------\033[0m"
+	
+}

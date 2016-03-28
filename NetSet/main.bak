@@ -1,0 +1,101 @@
+main () {
+#$1   FQDN
+#$2   ipaddr/prefix
+#$3   gateway
+#$4   dns1
+#$5   dns2
+#$3   interface
+#$4   app_root
+#$5   admin_mail
+
+usage="$0 FQDN ipaddr/prefix  [interface=eth0 [app_root=/Data [admin_mail=zgwldrc@163.com]]]"
+
+if [ $# -eq 0 ] 
+then
+  echo $usage
+  exit 1
+fi
+
+
+#***Set SYSTEM ENV
+#ipaddr
+func_SetIPADDR $2 $3
+
+#network
+func_setnetworking 
+#sysenv
+local HOSTNAME=${1:-localhost}
+local ZONE=${7:-localdomain}
+local APP_DOWNLOAD=${8:-/Data}/download
+local APP_SRC=${8:-/Data}/src
+local APP_LIB=${8:-/Data}/lib
+local ADMIN_MAIL=${9:-zgwldrc@163.com}
+
+#***Create app dirs
+mkdir -p $APP_DOWNLOAD
+mkdir -p $APP_SRC
+mkdir -p $APP_LIB
+
+
+#***Set IP args
+func_SetIPADDR $IPADDR $GATEWAY $DNS1 $NETMASK $NET_DEVICE 
+
+
+#***Write Bashrc File
+#first bak old file
+mv -f ~/.bashrc bashrc.bak
+#start#
+{
+	echo "#---------------------BASIC------------------------#"
+	echo ""
+	echo "# Source global definitions"
+	echo "if [ -f /etc/bashrc ]; then"
+	echo "	. /etc/bashrc"
+	echo "fi"
+	echo "alias rm='rm -i'"
+	echo "alias cp='cp -i'"
+	echo "alias mv='mv -i'"
+	echo "alias yi='yum install -y'"
+	echo "alias ys='yum search'"
+	echo "alias rg='rpm -qa | grep'"
+	echo "alias lh='ll -h'"
+	echo "export ZONE=$ZONE"
+	echo "export APP_DOWNLOAD=$APP_DOWNLOAD"
+	echo "export APP_SRC=$APP_SRC"
+	echo "export APP_LIB=$APP_LIB"
+	echo "export ADMIN_MAIL=$ADMIN_MAIL"
+	echo "export IP=\`ip a s eth0 | grep 'inet '|head -1 | awk '{print \$2}' | cut -d/ -f1\`"
+} > ~/.bashrc
+#end#
+echo ""
+echo -e "\033[32m----------------bashrc-------------------------\033[0m"
+echo -e "\033[32mYour bashrc is like this...--------------------\033[0m"
+cat ~/.bashrc
+echo -e "\033[32m----------------bashrc-------------------------\033[0m"
+
+#***CHANGE HOSTNAME
+sed -i '/HOSTNAME/d' /etc/sysconfig/network
+sed -i "\$a HOSTNAME=$HOSTNAME.$ZONE" /etc/sysconfig/network
+echo ""
+echo -e "\033[32m----------------Your New Host Name--------------\033[0m"
+echo -e "\033[32mYour New host Name is :-------------------------\033[0m"
+echo "                      $HOSTNAME.$ZONE"
+echo -e "\033[32m----------------Your New Host Name--------------\033[0m"
+
+#***Disabel SELINUX iptables
+setenforce 0 &> /dev/null
+sed -i '/SELINUX/s/enforcing/disabled/' /etc/sysconfig/selinux
+sed -i '/SELINUX/s/enforcing/disabled/' /etc/selinux/config
+iptables -F
+chkconfig --level 35 iptables off
+}
+
+#Example:
+# main  $IPADDR $GATEWAY $DNS1 $NETMASK $NET_DEVICE $HOSTNAME $ZONE $approot $admin_mail
+if [ $# -lt 2 ];then
+echo -e "\033[32m----------------Usage--------------\033[0m"
+ echo "Usage Example:$(basename $0) \$IPADDR \$GATEWAY [\$DNS1 \$NETMASK \$NET_DEVICE \$HOSTNAME \$ZONE \$approot \$admin_mail]"
+echo -e "\033[32m----------------Usage--------------\033[0m"
+ exit 1
+fi
+main $1 $2 $3 $4 $5 $6 $7 $8 $9

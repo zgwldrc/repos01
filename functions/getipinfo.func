@@ -1,0 +1,14 @@
+#import getipinfo.func
+#it provide follows variables depends on eth0's ipinfo
+#ipaddr_and_prefix  eg. 192.168.1.1/24
+#ipaddr             eg. 192.168.1.1
+#prefix             eg. 24
+#netaddr            eg. 192.168.1.0
+#netmask            eg. 255.255.255.0
+
+
+ipaddr_and_prefix=$(ip a s eth0 | grep 'inet '| awk '{print $2}')
+ipaddr=${ipaddr_and_prefix%/*}
+prefix=${ipaddr_and_prefix#*/}
+netaddr=$(echo $(ipcalc -n $ipaddr_and_prefix) | cut -d= -f2)
+netmask=$(echo $(ipcalc -m $ipaddr_and_prefix) | cut -d= -f2)

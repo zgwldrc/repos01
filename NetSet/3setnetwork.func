@@ -1,0 +1,42 @@
+#!/bin/bash
+# $1  GATEWAY
+# $2  DNS1
+# $3  DNS2
+func_setnetworking() {
+	local usage="$0 GATEWAY DNS1 [DNS2]"
+
+	if [ $# -lt 2 ]
+	then
+	    echo $usage
+	    exit 1
+	fi
+
+local	FILE=/etc/sysconfig/network-scripts/ifcfg-eth0
+local	GATEWAY=$1
+local	DNS1=$2
+local	DNS2=${3:-nodef}
+
+	if [[ "$DNS2" != "nodef" ]]
+	then
+
+	  local LIST=(GATEWAY DNS1 DNS2)
+
+	else
+	 
+	  local LIST=(GATEWAY DNS1)
+
+	fi
+local i
+	for i in ${LIST[@]}
+	do
+	func_SetStrValInFile $i $FILE
+	done
+
+        echo -e "\033[32m------------------------------------\033[0m"
+        echo -e "\033[32mYour networking args is like this...--------\033[0m"
+        cat $FILE
+        echo -e "\033[32m------------------------------------\033[0m"
+}
+
+
+

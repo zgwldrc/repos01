@@ -1,0 +1,28 @@
+###################################
+# Edit pxelinux.cfg/default
+###################################
+cat << EOF > $tftp_root/pxelinux.cfg/default
+default vesamenu.c32
+timeout 60
+
+menu background splash.jpg
+menu title Welcome to CentOS 6.5!
+menu color border 0 #ffffffff #00000000
+menu color sel 7 #ffffffff #ff000000
+menu color title 0 #ffffffff #00000000
+menu color tabmsg 0 #ffffffff #00000000
+menu color unsel 0 #ffffffff #00000000
+menu color hotsel 0 #ff000000 #ffffffff
+menu color hotkey 7 #ffffffff #ff000000
+menu color scrollbar 0 #ffffffff #00000000
+
+label local
+  menu label Boot from ^local drive
+  menu default
+  localboot 0xffff
+
+label kickstart1
+  menu label Boot from P^XE Server for KickStart Install CentOS6.5
+  kernel ./kernel/centos6.5/vmlinuz
+  append initrd=./kernel/centos6.5/initrd.img ks=nfs:$ipaddr:$kickstart_file
+EOF

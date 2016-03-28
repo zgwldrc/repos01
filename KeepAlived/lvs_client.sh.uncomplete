@@ -1,0 +1,15 @@
+#!/bin/bash
+#description:start realserver
+if [ $# -eq 0 ];then
+  echo "Usage `basename $0`: \$VirtualIP"
+  exit 1
+fi
+vip=${1}
+
+case "$1" in
+start)
+echo "start LVS of real server..."
+/sbin/ifconfig lo:0 $vip broadcast $vip netmask 255.255.255.255 up
+echo "1" > /proc/sys/net/ipv4/conf
+
+

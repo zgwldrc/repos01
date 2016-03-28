@@ -1,0 +1,75 @@
+#!/bin/bash
+###########################################
+# Install DHCP Server
+##########################################
+#import getipinfo.func
+#it provide follows variables depends on eth0's ipinfo 
+#ipaddr_and_prefix  eg. 192.168.1.1/24
+#ipaddr             eg. 192.168.1.1
+#prefix             eg. 24
+#netaddr            eg. 192.168.1.0
+#netmask            eg. 255.255.255.0
+. ../functions/getipinfo.func
+
+
+# ip ranges allowed for clients to get
+range_start=100
+range_end=200
+
+#let myself become the dns of clients
+#
+dns1="$ipaddr"
+#dns2=""
+router="192.168.2.254"
+
+
+zone=xy.cn
+
+#setup a output file containing config of dhcpd
+#
+of="/tmp/$(basename %0).tmp"
+:> $of
+eth0="/etc/sysconfig/network-scripts/ifcfg-eth0"
+
+
+
+#Install dhcpd
+yum install -y dhcp
+chkconfig --level 35 dhcpd on
+
+########################
+# Write dhcpd.conf
+########################
+# check zone value
+if [ ! "x$zone" == "x" ];then
+	echo "option domain-name \"$zone\";" >> $of
+fi
+# check dns value
+if [ ! "x$dns1" == "x" ];then
+	dns="$dns1"
+	if [ ! "x$dns2" == "x" ];then
+		dns="$dns,$dns2"
+	fi
+	echo "option domain-name-servers $dns;" >> $of
+fi
+# check router value
+if [ ! "x$router" == "x" ];then
+	echo "option routers $router;" >> $of
+fi
+
+cat << EOF >> $of
+default-lease-time 24000;
+max-lease-time 48000;
+log-facility local7;
+
+subnet $netaddr netmask $netmask {
+  range ${netaddr%.*}.$range_start ${netaddr%.*}.$range_end;
+  next-server $ipaddr;
+  filename "pxelinux.0";
+}
+EOF
+cp -f $of /etc/dhcp/dhcpd.conf
+service dhcpd restart
+
+
+

@@ -1,0 +1,70 @@
+
+func_InstallMySQLFromSource5_5_47() {
+        ##############################
+        #Set Variables for your prefer
+        ##############################
+        MYSQL_PREFIX=/Data/apps/mysql
+
+        local mysql_Url=http://cdn.mysql.com//Downloads/MySQL-5.5/mysql-5.5.47.tar.gz
+
+        local operation="cmake .. \
+		-DCMAKE_INSTALL_PREFIX=$MYSQL_PREFIX \
+		-DMYSQL_DATADIR=$MYSQL_PREFIX/data \
+		-DMYSQL_UNIX_ADDR=$MYSQL_PREFIX/tmp/mysql.sock \
+		-DSYSCONFDIR=$MYSQL_PREFIX/etc \
+		-DWITH_INNOBASE_STORAGE_ENGINE=1 \
+		-DDEFAULT_CHARSET=utf8 \
+		-DDEFAULT_COLLATION=utf8_bin"
+
+        local mysql_Tarball=${mysql_Url##*/}
+        local mysql_SrcDir=${mysql_Tarball%.tar.*}
+        local mysql_Ver=${mysql_SrcDir##*-}
+        local mysql_Base=${mysql_SrcDir%-[0-9].*}
+
+        ##############################
+        #Main
+        ##############################
+
+	####System Prepare
+	
+        func_WriteEnvVarToBashrc MYSQL MYSQL_PREFIX
+	
+        mkdir -p $MYSQL_PREFIX
+        mkdir -p $APP_DOWNLOAD
+        mkdir -p $APP_SRC
+
+	grep mysql /etc/passwd || useradd -r -s /bin/false mysql
+	yum -y install cmake ncurses ncurses-devel wget gcc gcc-c++
+
+	####Get MYSQL Tarball
+        cd $APP_DOWNLOAD        
+        [ -f $mysql_Tarball            ] || wget $mysql_Url
+        [ -d $APP_SRC/$mysql_SrcDir    ] || tar axvf $mysql_Tarball -C $APP_SRC
+	
+	####Compile MYSQL
+        cd $APP_SRC/$mysql_SrcDir
+	[ -d bld ] || mkdir bld
+	cd bld
+        make clean &> /dev/null
+	$operation && make && make install
+
+	echo $MYSQL_PREFIX/lib >> /etc/ld.so.conf.d/mysql-$mysql_Ver.conf
+	ldconfig
+
+        ####Make init Script And init DB
+        cd $MYSQL_PREFIX
+	chown -R mysql .
+	chgrp -R mysql .
+	scripts/mysql_install_db --user=mysql --basedir=$MYSQL_PREFIX --datadir=$MYSQL_PREFIX/data
+	sleep 2
+	chown -R mysql data
+	rm -rf etc
+	mkdir etc
+	cp support-files/my-medium.cnf etc/my.cnf
+	rm -rf /etc/my.cnf
+	ln -s $MYSQL_PREFIX/etc/my.cnf /etc/my.cnf
+	rm -rf /etc/init.d/mysqld
+	cp support-files/mysql.server /etc/init.d/mysqld
+	chkconfig --add mysqld
+	chkconfig --level 35 mysqld on
+}

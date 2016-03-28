@@ -1,0 +1,7 @@
+1客户机启动时会将自己的mac地址写到本地/Data/download/maclist文件中
+
+2然后通过nmapscan脚本扫描范围ip获取多个客户机的ip与mac信息输出到/tmp/scanlist
+
+3通过步骤1的maclist中的MAC地址检索步骤2的scanlist从而得到ip和mac的对应列表/tmp/ipmaclist
+
+4.可以使用wgetrepos脚本下载本机的svn管理下的脚本目录从而方便在每台计算机上运行脚本

@@ -1,0 +1,150 @@
+func_InstallPHPFromSource5_5_32() {
+        ##############################
+        #Set Variables for your prefer
+        ##############################
+        PHP_PREFIX=/Data/apps/php
+
+        local php_Url=http://cn2.php.net/distributions/php-5.5.32.tar.gz
+	local mhash_Url="http://nchc.dl.sourceforge.net/project/mhash/mhash/0.9.9.9/mhash-0.9.9.9.tar.gz"
+	local libmcrypt_Url="http://nchc.dl.sourceforge.net/project/mcrypt/Libmcrypt/2.5.8/libmcrypt-2.5.8.tar.gz"
+	local mcrypt_Url="http://nchc.dl.sourceforge.net/project/mcrypt/MCrypt/2.6.8/mcrypt-2.6.8.tar.gz"
+
+        local with="$1"
+	local opt="--with-apxs2=$APACHE_PREFIX/bin/apxs"
+	case $with in 
+              apache) opt="--with-apxs2=$APACHE_PREFIX/bin/apxs" ;;
+	      nginx)  opt="--enable-fpm --enable-pcntl" ;;
+              *)      :;;
+        esac
+		
+        local operation="./configure --prefix=$PHP_PREFIX \
+			--with-config-file-path=$PHP_PREFIX/etc \
+			$opt \
+			--with-mysql=mysqlnd \
+			--with-mysqli=mysqlnd \
+			--with-pdo-mysql=mysqlnd \
+			--enable-ftp \
+			--enable-exif \
+			--enable-mbstring \
+			--enable-shmop \
+			--enable-soap \
+			--enable-sockets \
+			--enable-zip \
+			--enable-bcmath \
+			--enable-gd-native-ttf \
+			--with-gd \
+			--with-freetype-dir \
+			--with-jpeg-dir \
+			--with-png-dir \
+			--with-curl \
+			--with-openssl \
+			--with-mhash \
+                        --with-mcrypt=$APP_LIB/libmcrypt \
+			--with-xmlrpc \
+			--with-zlib \
+			--with-bz2 \
+			--with-snmp"
+
+        local php_Tarball=${php_Url##*/}
+        local php_SrcDir=${php_Tarball%.tar.*}
+        local php_Ver=${php_SrcDir##*-}
+        local php_Base=${php_SrcDir%-[0-9].*}
+
+        local mhash_Tarball=${mhash_Url##*/}
+        local mhash_SrcDir=${mhash_Tarball%.tar.*}
+        local mhash_Ver=${mhash_SrcDir##*-}
+        local mhash_Base=${mhash_SrcDir%-[0-9].*}
+
+        local libmcrypt_Tarball=${libmcrypt_Url##*/}
+        local libmcrypt_SrcDir=${libmcrypt_Tarball%.tar.*}
+        local libmcrypt_Ver=${libmcrypt_SrcDir##*-}
+        local libmcrypt_Base=${libmcrypt_SrcDir%-[0-9].*}
+
+        local mcrypt_Tarball=${mcrypt_Url##*/}
+        local mcrypt_SrcDir=${mcrypt_Tarball%.tar.*}
+        local mcrypt_Ver=${mcrypt_SrcDir##*-}
+        local mcrypt_Base=${mcrypt_SrcDir%-[0-9].*}
+
+        ##############################
+        #Main
+        ##############################
+
+	####System Prepare
+	
+        func_WriteEnvVarToBashrc PHP PHP_PREFIX
+	
+        mkdir -p $PHP_PREFIX
+        mkdir -p $APP_DOWNLOAD
+        mkdir -p $APP_SRC
+
+	yum -y install libcurl-devel perl gd zlib \
+		freetype libpng libjpeg libxml2-devel \
+		openssl-devel bzip2-devel openjpeg-devel \
+		libjpeg-turbo-devel libpng-devel freetype-devel \
+		wget net-snmp net-snmp-devel
+        ####Get mhash Tarball
+        cd $APP_DOWNLOAD
+        [ -f $mhash_Tarball ] || wget $mhash_Url
+        [ -d $APP_SRC/$mhash_SrcDir ] || tar axvf $mhash_Tarball -C $APP_SRC
+
+        ####Get libmcrypt Tarball
+        cd $APP_DOWNLOAD
+        [ -f $libmcrypt_Tarball ] || wget $libmcrypt_Url
+        [ -d $APP_SRC/$libmcrypt_SrcDir ] || tar axvf $libmcrypt_Tarball -C $APP_SRC
+
+        ####Get mcrypt Tarball
+        cd $APP_DOWNLOAD
+        [ -f $mcrypt_Tarball ] || wget $mcrypt_Url
+        [ -d $APP_SRC/$mcrypt_SrcDir ] || tar axvf $mcrypt_Tarball -C $APP_SRC
+
+	####Get PHP Tarball
+        cd $APP_DOWNLOAD        
+        [ -f $php_Tarball            ] || wget $php_Url
+        [ -d $APP_SRC/$php_SrcDir    ] || tar axvf $php_Tarball -C $APP_SRC
+
+         
+	
+	####Compile mhash
+        cd $APP_SRC/$mhash_SrcDir
+        make clean &> /dev/null
+	./configure --prefix=$APP_LIB/mhash && make && make install
+	echo $APP_LIB/mhash/lib > /etc/ld.so.conf.d/mhash.conf
+
+	####Compile libmcrypt
+        cd $APP_SRC/$libmcrypt_SrcDir
+        make clean &> /dev/null
+	./configure --prefix=$APP_LIB/libmcrypt && make && make install
+	cd $APP_SRC/$libmcrypt_SrcDir/libltdl
+	./configure --prefix=$APP_LIB/libmcrypt --enable-ltdl-install && make && make install
+	echo $APP_LIB/libmcrypt/lib > /etc/ld.so.conf.d/libmcrypt.conf
+	
+	####Compile mcrypt
+        cd $APP_SRC/$mcrypt_SrcDir
+        make clean &> /dev/null
+	./configure --prefix=$APP_LIB/mcrypt && make && make install
+	
+	####Compile PHP
+        cd $APP_SRC/$php_SrcDir
+        make clean &> /dev/null
+	$operation && make && make install
+	cp -f php.ini-production $PHP_PREFIX/etc/php.ini
+
+        if [ "x$1" == "xapache" ];then
+
+		####Write httpd conf.d/php.conf
+		{
+		 echo '<FilesMatch \.php$>'
+		 echo 'SetHandler application/x-httpd-php'
+		 echo '</FilesMatch>'
+		 echo 'DirectoryIndex index.php'
+		} > $APACHE_PREFIX/conf.d/php.conf
+
+	else
+
+		cd $PHP_PREFIX/etc
+		cp php-fpm.conf.default php-fpm.conf
+
+        fi
+
+
+}

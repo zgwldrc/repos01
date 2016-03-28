@@ -1,0 +1,9 @@
+#################################
+# Copy File From ISO Image
+#################################
+mkdir -p $tftp_root/kernel/centos6.5
+cd $mount_point/isolinux
+cp -f splash.jpg $tftp_root
+cp -f vmlinuz $tftp_root/kernel/centos6.5
+cp -f initrd.img $tftp_root/kernel/centos6.5
+cp -f isolinux.cfg $tftp_root/pxelinux.cfg/default

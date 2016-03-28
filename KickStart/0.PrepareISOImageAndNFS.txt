@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# Need to Mannualy Prepare a ISO image at /Data/iso/CentOS-6.5-x86_64-bin-DVD1.iso
+#
+##################################################################################
+# Install NFS and Make Share
+#############################
+# Setup NFS share path
+share_ro=/Data/nfs_share 
+share_rw=/Data/download
+
+# iso file location
+iso_path=/Data/iso/CentOS-6.5-x86_64-bin-DVD1.iso
+
+# iso mount point
+mount_point=/Data/nfs_share/centos6.5
+
+############################
+# write mount info to fstab
+############################
+mkdir -p $mount_point
+grep -q $mount_point /etc/fstab
+if [ $? -eq 1 ];then
+cat << eof >> /etc/fstab
+$iso_path $mount_point iso9660 defaults,loop 0 0
+eof
+mount -a
+fi
+
+# Install NFS
+yum -y install rpcbind nfs-utils
+chkconfig --level 35 nfs on
+chkconfig --level 35 rpcbind on
+########################################
+# Write Nfs share path to /etc/exports
+########################################
+
+cat << EOF > /etc/exports 
+$share_rw *(rw,no_root_squash)
+$share_ro *(ro,async,nohide,crossmnt)
+EOF
+###############
+# Start Service
+###############
+service rpcbind restart
+service nfs restart

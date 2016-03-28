@@ -1,0 +1,3 @@
+#import this file to get the variable which containing mac
+#  $hwaddr  
+hwaddr="$(ip link show ${2:-eth0} | grep ether | awk '{print $2}')"

@@ -1,0 +1,18 @@
+func_SetStrValInFile() {
+# $1:    string look for
+# $2:    in which file
+# ${!1}: value of the string,the string must uniq in file
+
+if [ $# -eq 0 ];then
+    echo "Usage :$(basename $0) ARG1(string look for) ARG2(in which file)"
+    exit 1
+fi
+
+    grep -q ${1} ${2}
+
+        if [ $? -eq 0 ];then
+            sed -i "/${1}/s/.*/${1}=${!1}/" ${2}
+        else
+            echo "${1}=${!1}" >> ${2}
+        fi
+}

@@ -1,0 +1,26 @@
+
+func_WriteEnvVarToBashrc() {
+	#$1 is Title
+	#$2-$n is variable name,the variable need to has been defined
+
+	if [ $# -eq 0 ];then
+		echo "Usage:%0 TITLE VARNAME1 VARNAME2 VARNAME3 ..."
+		exit 1
+	fi
+
+	local title=$1
+	shift
+	grep -q $title ~/.bashrc 
+	if [ $? -eq 1 ];then
+	  {
+	    echo 
+	    echo "#--------$title---------#" 
+	    until [ $# -eq 0 ]
+	    do
+	      echo "export $1=${!1}"
+	      shift
+	    done
+	    echo "#--------$title---------#"
+	  } >> ~/.bashrc
+	fi
+}

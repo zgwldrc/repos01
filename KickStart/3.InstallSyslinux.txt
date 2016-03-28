@@ -1,0 +1,7 @@
+###########################
+# Install syslinux package
+###########################
+yum install -y syslinux
+cd /usr/share/syslinux
+cp pxelinux.0 vesamenu.c32 $tftp_root
+mkdir -p $tftp_root/pxelinux.cfg

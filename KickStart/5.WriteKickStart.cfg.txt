@@ -1,0 +1,87 @@
+########################################
+# Write KickStart Config File
+########################################
+#!/bin/bash
+
+kickstart_file=/Data/nfs_share/kickstart/centos6.5.ks
+mkdir -p ${kickstart_file%/*}
+
+rootpw=xiayu123
+pubkey="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAvMl8ZfdiT7z5PDNpNV8cghr/y+HcY3ZSbhgTzZVZlpESUVqsEDA7L8gBHn845dZYpLUNNAmNFl7c61aR1EvEwEBlrkYDxaN6dsO5d9Smoc+odUtpFN5jzcI4NJ9pKVAscY1oEoMq7x/UiRVoeZMm1RhjXf3g5jFv8b8JGStnLqwGZRCPuFH5Haj7FzA5mj4wwn6UMM/Yhw1XnqP6QI6KJa8bVJb45kQgpPmziZ46TLGRUvTJgo7/DgLNK/F6kwzjvM3OYGa80YR0p8thWILeVMQ1bb+goz+H6k+6fGPhn5+pZyt3A9A7dCYNPOiX29y0UttWNV/BGEL6pYESFxTavw== root@zgwldrc.xy.cn"
+
+##Begin Write KickStart config
+#
+#
+cat << EOF > $kickstart_file
+
+install
+text
+nfs --server=$ipaddr --dir=$mount_point
+lang en_US.UTF-8
+keyboard us
+network --onboot yes --device eth0 --bootproto dhcp
+rootpw $rootpw
+authconfig  --enableshadow  --passalgo=sha512
+firewall  --disabled
+selinux  --disabled
+timezone  Asia/Shanghai
+bootloader --location=mbr --driveorder=vda,sda --append="crashkernel=auto rhgb quiet"
+reboot
+zerombr
+clearpart --all
+part  /      --fstype=ext4  --size=8196 
+part  /boot  --fstype=ext4  --size=200
+part  /Data  --fstype=ext4  --size=200 --grow
+part  swap   --fstype=swap  --size=1024
+services  --disabled  cups,kdump,acpid,portreserve
+
+%packages
+@additional-devel
+@core
+@development
+@server-platform-devel
+%end
+
+
+%post
+#!/bin/sh
+# Import root admin's public key
+#
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+chown root.root /root/.ssh
+echo "$pubkey" >> /root/.ssh/authorized_keys
+chmod 644 /root/.ssh/authorized_keys
+chown root.root /root/.ssh/authorized_keys
+
+# Change yum.repo to 163
+cd /etc/yum.repos.d
+mv CentOS-Base.repo CentOS-Base.repo.bak
+wget http://mirrors.163.com/.help/CentOS6-Base-163.repo
+mv CentOS6-Base-163.repo CentOS-Base.repo
+yum clean all
+yum makecache
+
+
+# Install ntpdate to sync time
+yum install -y ntpdate
+ntpdate s2m.time.edu.cn
+ntpdate 202.112.7.13
+hwclock -w
+
+
+# optimize ssh link speed
+#
+sed -ri -e 's/#(UseDNS ).*/\1 no/' /etc/ssh/sshd_config
+sed -i '/^GSSAPIAuthentication/s/yes/no/' /etc/ssh/sshd_config
+
+# Mount NFS report itself's mac addr
+mount -t nfs $ipaddr:$share_rw /mnt
+# get macaddr
+hwaddr="\$(ip link show eth0 | grep ether | awk '{print \$2}')"
+echo \$hwaddr >> /mnt/maclist
+
+umount /mnt
+
+EOF
+#-----Write KickStart file config Ending-----------#

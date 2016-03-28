@@ -1,0 +1,13 @@
+######################################
+# Install TFTP Server
+######################################
+tftp_root=/Data/tftpboot
+mkdir -p $tftp_root
+
+
+
+yum install -y tftp-server xinetd
+sed -i "s?/var/lib/tftpboot?$tftp_root?" /etc/xinetd.d/tftp
+chkconfig xinetd on
+chkconfig tftp on
+service xinetd restart
